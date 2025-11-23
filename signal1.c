@@ -4,7 +4,7 @@
 #include <signal.h>
 #include <unistd.h>
 
-int message = 0;
+volatile sig_atomic_t message = 0;
 
 void handler(int signum)
 { //signal handler
