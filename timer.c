@@ -3,54 +3,57 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
-int message = 0;
-int start;
-int count;
+volatile sig_atomic_t message = 0;
+volatile sig_atomic_t count = 0;
+time_t start_time;
 
 void alarm_handler(int signum)
 { //signal alarm_handler
+
+  // Handler executes quickly; no shared non-atomic state modified here.
+  // Reentrancy is safe because count/message are sig_atomic_t.
   printf("Hello World!\n");
   message = 1;
-  // signal(SIGALRM, alarm_handler); // he alarm_handler automatically disables handling of future signals so we set it again here.
+  count++;
+  alarm(5);
 }
 
 void int_handler(int signum)
 { //signal alarm_handler
-  int current = time(NULL);
-  int time_in_execution = current-start;
+  time_t now = time(NULL);
+  int elapsed = (int)(now - start_time);
   printf("Number of alarms: %d\n", count);
-  printf("Time in time_in_execution: %d secs\n", time_in_execution);
+  printf("Time in time_in_execution: %d secs\n", elapsed);
   exit(0);
 }
 
-int main(int argc, char * argv[])
-{
-  /*
-  idea: 
-  get current time at beginning of main
-  set counter for number of SIGALRM that has passed
-  in alarm_handler for ctrl + c, get current time
-  subtract to get the time
-  */
-  count = 0;
-     
-  start = time(NULL);
+int main()
+{ 
+  start_time = time(NULL);
 
-  signal(SIGALRM,alarm_handler); //register alarm_handler to handle SIGALRM
-  signal(SIGINT,int_handler); //register alarm_handler to handle SIGALRM
-  alarm(1);
+  struct sigaction sa;
+
+  // SIGALRM
+  sa.sa_handler = alarm_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART;
+  sigaction(SIGALRM, &sa, NULL);
+
+  // SIGINT (Ctrl+C)
+  sa.sa_handler = int_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART;
+  sigaction(SIGINT, &sa, NULL);
+
   while(1){
-    
-    if (message){
-      
+    pause();
+
+    if (message) { 
       printf("Turing was right!\n");
       message = 0;
-      count ++;
-      alarm(1);
     }
-  
-  
   }
-  return 0; //never reached
+  return 0;
 }
