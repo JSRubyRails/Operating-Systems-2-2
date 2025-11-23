@@ -4,12 +4,12 @@
 #include <signal.h>
 #include <unistd.h>
 
-int message = 0;
+volatile sig_atomic_t message = 0; 
 
 void handler(int signum)
 { //signal handler
-  printf("Hello World!\n");
   message = 1;
+  printf("Hello World!\n");
   alarm(5);
 }
 
@@ -19,12 +19,12 @@ int main(int argc, char * argv[])
   alarm(5); //Schedule a SIGALRM for 5 seconds
 
   while(1){
+    pause();
+
     if (message){
       printf("Turing was right!\n");
       message = 0;
     }
-    pause();
   }
-  //busy wait for signal to be delivered
   return 0; //never reached
 }
